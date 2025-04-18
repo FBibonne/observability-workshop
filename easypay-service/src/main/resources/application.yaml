@@ -42,3 +42,6 @@ spring:
       bindings:
         payment:
           destination: payment-topic
+logging:
+  pattern:
+    level: "%5p [%mdc]"

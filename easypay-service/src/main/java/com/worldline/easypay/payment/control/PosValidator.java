@@ -22,6 +22,7 @@ public class PosValidator {
     }
     
     public boolean isActive(String posId) { 
+        try{
         PosRef probe = new PosRef();
         probe.posId = posId;
         List<PosRef> posList = posRefRepository.findAll(Example.of(probe));
@@ -37,7 +38,11 @@ public class PosValidator {
             LOG.warn( "Check POS does not pass: inactive posId {}", posId);
         }
 
-        return result;
+        return result;}
+        catch(Exception e){
+            LOG.error(e.getMessage());
+            throw e;
+        }
 
     }
 }

@@ -57,6 +57,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:postgresql")
+    implementation("io.opentelemetry:opentelemetry-api")
 }
 
 tasks.withType<Test> {
