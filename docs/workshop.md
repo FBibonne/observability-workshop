@@ -196,24 +196,13 @@ Docker Compose version v2.24.7
 
 #### If you don't want to bother with a local setup
 
-It's strongly recommended to use [Gitpod](https://gitpod.io)
-or [GitHub Codespaces](https://github.com/features/codespaces).
+It's strongly recommended to use [GitHub Codespaces](https://github.com/features/codespaces).
 You must create an account first.
 You then can open this project in either your local VS Code or directly in your browser:
-
-[![Open in Gitpod](img/open-in-gitpod.svg)](https://gitpod.io/#github.com/worldline/observability-workshop.git)
 
 ## Environment Setup
 
 In this chapter, you will learn how to start either GitPod or GitHub Codespaces.
-
-### Open GitPod
-
-We will assume you will use GitPod for this workshop :)
-
-[![Open in Gitpod](img/open-in-gitpod.svg)](https://gitpod.io/#github.com/worldline/observability-workshop.git)
-
-When a messages invites you making an URL public, select and validate it.
 
 ### 🛠  Open Github CodeSpaces
 
@@ -243,8 +232,7 @@ The "infrastructure stack" is composed of the following components:
   of our microservices.
 * The following microservices: API Gateway, Merchant BO, Fraud Detect, Smart Bank Gateway
 
-ℹ️ If you run your application on GitPod, the following step are automatically started during the provisioning of your
-GitPod environment.
+ℹ️ If you run your application on a CDE (GitPod, Codespaces, Coder…), the following step are automatically started during the provisioning of your environment.
 
 🛠️ Otherwise, to run it on your desktop, execute the following commands
 
@@ -288,7 +276,6 @@ observability-workshop-postgres-fraudetect-1       postgres:16                  
 observability-workshop-postgres-merchantbo-1       postgres:16                                   "docker-entrypoint.s…"   postgres-merchantbo       3 minutes ago   Up 3 minutes (healthy)        0.0.0.0:5435->5432/tcp, [::]:5435->5432/tcp
 observability-workshop-postgres-smartbank-1        postgres:16                                   "docker-entrypoint.s…"   postgres-smartbank        3 minutes ago   Up 3 minutes (healthy)        0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
 observability-workshop-prometheus-1                prom/prometheus:latest                        "/bin/prometheus --c…"   prometheus                3 minutes ago   Up 3 minutes                  0.0.0.0:9090->9090/tcp, :::9090->9090/tcp
-observability-workshop-pyroscope-1                 grafana/pyroscope:latest                      "/usr/bin/pyroscope …"   pyroscope                 12 hours ago    Exited (255) 38 minutes ago   0.0.0.0:4040->4040/tcp, :::4040->4040/tcp
 observability-workshop-tempo-1                     grafana/tempo:latest                          "/tempo -config.file…"   tempo                     3 minutes ago   Up 3 minutes                  0.0.0.0:3200->3200/tcp, :::3200->3200/tcp, 0.0.0.0:9095->9095/tcp, :::9095->9095/tcp, 0.0.0.0:9411->9411/tcp, :::9411->9411/tcp
 smartbank-gateway                                  smartbank-gateway:latest                      "java -Xmx4g -cp app…"   smartbank-gateway         3 minutes ago   Up 2 minutes (healthy)
 ```
@@ -307,9 +294,8 @@ following instances should be registered with Eureka:
 > aside positive
 >
 > If you run this workshop on your desktop, you can go to this URL: [http://localhost:8761](http://localhost:8761).    
-> If you run it on GitPod, you can go to the corresponding URL (
-> e.g., https://8761-worldline-observability-w98vrd59k5h.ws-eu114.gitpod.io) instead by going into the `PORTS` view and
-> select the url next to the port `8761`.
+> If you run it on a CDE, you can go to the corresponding URL instead by going into the `PORTS` view and
+> select the url next to the port `8761`. You may have to `Add Port` manually if not detected by VSCode.
 
 ✅ All services should be registered before continuing…
 
@@ -447,7 +433,7 @@ The logger can be created by adding a static class variable such as:
 
 Think to use the corresponding class to instantiate it!
 
-##### What about log levels?
+##### *What about log levels?*
 
 Use the most appropriate log level
 
@@ -467,12 +453,12 @@ the [following log levels by default](https://www.slf4j.org/apidocs/org/slf4j/ev
 We can also log payment requests and responses to provide even more context, which could be helpful for following
 requests in this workshop.
 
-##### Add logs
+##### *Add logs*
 
 📝 Modify the `easypay-service/src/main/java/com/worldline/easypay/payment/boundary/PaymentResource.java` class by
 uncommenting all `// LOG.…` lines (keep MDC lines for later 😉).
 
-### Ze technical issue
+### The technical issue
 
 Another issue was raised for the POS (Point of Sell) ``POS-02`` (but we didn’t know yet!).
 
@@ -562,7 +548,7 @@ traffic?
 🛠️ Generate some load with `k6` (a Grafana tool for load testing):
 
 ```bash
-$ k6 run -u 5 -d 30s k6/01-payment-only.js
+$ k6 run -u 5 -d 5s k6/01-payment-only.js
 ```
 
 👀 Check again logs:
@@ -610,6 +596,10 @@ public ResponseEntity<PaymentResponse> processPayment(PaymentRequest paymentRequ
     try { // Add a try-finally construct and wrap the initial code here 
         //...
         return httpResponse;
+    catch (Exception e) { 
+        // Catch any exception to log it with MDC value
+        LOG.error(e.getMessage());
+        throw e;
     } finally {
         // Clear MDC at the end
         MDC.clear();
@@ -623,7 +613,7 @@ public ResponseEntity<PaymentResponse> processPayment(PaymentRequest paymentRequ
 
 Now, we want to print these values when a log line is printed in the console.
 
-📝 Modify to the spring configuration file (``easypay-service/src/main/resources/application.yaml``) and modify the
+📝 Modify to the spring configuration file (``easypay-service/src/main/resources/application.yaml``) and add the
 `logging.level.pattern` property to add both the ``cardNumber`` & ``pos``fields to all logs:
 
 ```yaml
@@ -705,7 +695,7 @@ With Spring Boot, you can write your logs in Elastic Common Schema (ECS), Graylo
 JSON formats:
 [Structured Logging with Spring Boot Logging](https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.structured).
 
-📝 OPTIONAL: You can try to change the console log format to one of ``ecs``, ``gelf`` or ``logstash`` in
+📝 **OPTIONAL:** You can try to change the console log format to one of ``ecs``, ``gelf`` or ``logstash`` in
 ``easypay-service``, by adding to the application.yaml file:
 
 ```yaml
@@ -725,6 +715,14 @@ $ docker compose up -d --build easypay-service
 
 👀 Check logs in the console to see the new format.
 
+```
+(...)
+easypay-service  | {"@timestamp":"2025-04-11T21:02:40.171457832Z","log.level":"INFO","process.pid":1,"process.thread.name":"http-nio-8080-exec-1","service.name":"easypay-service","log.logger":"org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[\/]","message":"Initializing Spring DispatcherServlet 'dispatcherServlet'","ecs.version":"8.11"}
+easypay-service  | {"@timestamp":"2025-04-11T21:02:40.171819865Z","log.level":"INFO","process.pid":1,"process.thread.name":"http-nio-8080-exec-1","service.name":"easypay-service","log.logger":"org.springframework.web.servlet.DispatcherServlet","message":"Initializing Servlet 'dispatcherServlet'","ecs.version":"8.11"}
+easypay-service  | {"@timestamp":"2025-04-11T21:02:40.175088520Z","log.level":"INFO","process.pid":1,"process.thread.name":"http-nio-8080-exec-1","service.name":"easypay-service","log.logger":"org.springframework.web.servlet.DispatcherServlet","message":"Completed initialization in 3 ms","ecs.version":"8.11"}
+(...)
+```
+
 > aside positive
 >
 > Structured logging may be less readable for humans, but it is perfect for log concentrators as they are easy to parse!
@@ -733,7 +731,7 @@ $ docker compose up -d --build easypay-service
 
 It is also possible to send logs directly to a log collector by configuring an appender in your logging framework.
 
-This has the advantage of being more real-time than the previous approach.
+This approach offers a more real-time experience compared to the previous method.
 
 Loki can ingest logs using its own API or using the OpenTelemetry protocol. So we have several options:
 
@@ -794,14 +792,14 @@ supported by the Agent.
 
 ℹ️ To attach an agent to a JVM, you just have to add the `-javaagent` option to the JVM command line.
 
-🛠️ Check if the `opentelemetry-javaagent.jar` is already downloaded in the `instrumentation` directory.
-If the file is missing, invoke the following script to download it:
+ℹ️ `opentelemetry-javaagent.jar` is already available as `/opentelemetry-javaagent.jar` in the container (`easypay-service/src/main/docker/Dockerfile`):
 
-```bash
-$ bash scripts/download-agent.sh
+```Dockerfile
+ENV OTEL_AGENT_VERSION "v2.14.0"
+ENV OTEL_AGENT_URL "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar"
+
+ADD --chown=$UID:$GID ${OTEL_AGENT_URL} /opentelemetry-javaagent.jar
 ```
-
-ℹ️ `opentelemetry-javaagent.jar` is available as `/opentelemetry-javaagent.jar` in the container.
 
 📝 Modify the `entrypoint` definition in the `compose.yml` file to attach the OpenTelemetry Java Agent to the
 `easypay-service`:
@@ -809,9 +807,6 @@ $ bash scripts/download-agent.sh
 ```yaml
 services:
   easypay-service:
-    # ...
-    volumes:
-      - ./instrumentation/opentelemetry-javaagent.jar:/opentelemetry-javaagent.jar
     # ...
     entrypoint:
       - java
@@ -992,7 +987,7 @@ prefer):
 ```bash
 http POST :8080/api/easypay/payments posId=POS-01 cardNumber=5555567898780008 expiryDate=789456123 amount:=40000
 # OR
-k6 run -u 1 -d 2m k6/01-payment-only.js
+k6 run -u 1 -d 1m k6/01-payment-only.js
 ```
 
 👀 You can also view logs for the other services (e.g., ``api-gateway``).
@@ -1048,7 +1043,7 @@ service:
 🛠 Restart the collector to take into account the new configuration:
 
 ```bash
-docker compose restart opentelemetry-collector
+docker compose up -d --build opentelemetry-collector
 ```
 
 🛠️ Generate some logs with curl/httpie or k6.
@@ -1174,15 +1169,15 @@ the memory usage of all your services by memory area,
 * Click on ``Operations`` and select ``Aggregations`` > ``Sum``, and ``Run query``: you obtain the whole memory
   consumption of all your JVMs,
 * To split the memory usage per service, you can click on the ``By label`` button and select the label named
-  ``application`` (do not forget to click on ``Run query`` afterthat).
+  ``service-name`` (do not forget to click on ``Run query`` afterthat).
 
 🛠️ You can also filter metrics to be displayed using ``Label filters``: try to create a filter to display only the
-metric related to the application named easypay-service.
+metric related to the service named easypay-service.
 
 > aside positive
 >
 > At the bottom of the query builder, you should see something like:  
-> `sum by(application) (jvm_memory_used_bytes{application="easypay-service"})`.  
+> `sum by(service_name) (jvm_memory_used_bytes{service_name="easypay-service"})`.  
 > This is the effective query raised by Grafana to Prometheus in order to get its metrics.  
 > This query language is named [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/).
 
@@ -1236,8 +1231,7 @@ We were talking about an incident, isn’t it?
 🛠️ Create a query with the following parameters to get error logs of the ``smartbank-gateway`` service:
 
 * Label filters: ``service_name`` = ``smartbank-gateway``
-* line contains/Json: ``expression``= ``level="level"``
-* label filter expression: ``label`` = ``level ; ``operator`` = ``=~`` ; ``value`` = ``WARN|ERROR``
+* label filter expression: ``label`` = ``detected_level ; ``operator`` = ``=~`` ; ``value`` = ``warn|error``
 
 🛠️ Click on ``Run query`` and check out the logs.
 
@@ -1252,6 +1246,12 @@ Normally you will see the used JVM Heap reaching the maximum allowed.
 > Grafana and Prometheus allows you to generate alerts based on metrics,
 > using [Grafana Alertmanager](https://grafana.com/docs/grafana/latest/alerting/set-up/configure-alertmanager/).  
 > For instance, if CPU usage is greater than 80%, free memory is less than 1GB, used heap is greater than 80%, etc.
+
+🛠️ You may have to restart smartbank:
+
+```bash
+$ docker compose restart smartbank-gateway
+```
 
 ### Business metrics
 
@@ -1301,9 +1301,9 @@ dependencies {
 
 We need to declare two timers in our code:
 
-* ``processTimer`` to record the ``snowcamp.payment.process`` metric: it represents the payment processing time and
+* ``processTimer`` to record the ``devoxx.payment.process`` metric: it represents the payment processing time and
   record the time spent in the `process` method,
-* ``storeTimer`` to record the ``snowcamp.payment.store`` metric: it represents the time required to store a payment
+* ``storeTimer`` to record the ``devoxx.payment.store`` metric: it represents the time required to store a payment
   in database by recording the time spent in the `store` method.
 
 📝 Let’s modify the ``com.worldline.easypay.payment.control.PaymentService`` class to declare them:
@@ -1326,13 +1326,13 @@ public class PaymentService {
         OpenTelemetry openTelemetry = GlobalOpenTelemetry.get(); // (2)
 
         processHistogram = openTelemetry.getMeter(EasypayServiceApplication.class.getName())  //(3)
-                .histogramBuilder("snowcamp.payment.process")  // (4)
+                .histogramBuilder("devoxx.payment.process")  // (4)
                 .setDescription("Payment processing time") // (5)
                 .setUnit("ms") // (6)
                 .ofLongs() // (7)
                 .build();
         storeHistogram = openTelemetry.getMeter(EasypayServiceApplication.class.getName())
-                .histogramBuilder("snowcamp.payment.store")
+                .histogramBuilder("devoxx.payment.store")
                 .setDescription("Payment storing time")
                 .setUnit("ms")
                 .ofLongs()
@@ -1402,7 +1402,7 @@ public class PaymentService {
     public PaymentService(/* ... */) {
         // ...
         requestCounter = openTelemetry.getMeter(EasypayServiceApplication.class.getName()) // (2)
-                .counterBuilder("snowcamp.payment.requests")
+                .counterBuilder("devoxx.payment.requests")
                 .setDescription("Payment requests counter")
                 .build();
     }
@@ -1430,16 +1430,10 @@ public void accept(PaymentProcessingContext paymentContext) {
 
 #### 5. Redeploy easypay
 
-🛠️ Rebuild the easypay-service:
+🛠️ Rebuild and redeploy `easypay-service`:
 
 ```bash
-$ docker compose build easypay-service
-```
-
-🛠️ Redeploy easypay:
-
-```bash
-$ docker compose up -d easypay-service
+$ docker compose up -d --build easypay-service
 ```
 
 🛠️ Once easypay is started (you can check logs with the ``docker compose logs -f easypay-service`` command and wait for
@@ -1448,16 +1442,16 @@ an output like ``Started EasypayServiceApplication in 32.271 seconds``):
 * Execute some queries:
 
 ```bash
-$ http POST :8080/api/easypay/payments posId=POS-01 cardNumber=5555567898780008 expiryDate=789456123 amount:=40000
+$ k6 run -u 1 -d 1m k6/01-payment-only.js
 ```
 
 🛠️ Then go to Grafana and explore Metrics to find your newly created metrics:
 
-* Search for metric with base name `snowcamp_payment_process`,
+* Search for metric with base name `devoxx_payment_process`,
 * 👀 You should get 3 new metrics:
-    * `snowcamp_payment_process_milliseconds_bucket`,
-    * `snowcamp_payment_process_milliseconds_count`,
-    * `snowcamp_payment_process_milliseconds_sum`.
+    * `devoxx_payment_process_milliseconds_bucket`,
+    * `devoxx_payment_process_milliseconds_count`,
+    * `devoxx_payment_process_milliseconds_sum`.
 
 👀 Explore them, especially the `_bucket` one.
 
@@ -1472,7 +1466,7 @@ Especially:
 * We can get the average time spent in the method by dividing the `sum` by the `count`,
 * We can calculate the latency percentile thanks to the buckets.
 
-Finally, our ``Counter`` becomes a metric suffixed with ``_total``: `snowcamp_payment_requests_total`.
+Finally, our ``Counter`` becomes a metric suffixed with ``_total``: `devoxx_payment_requests_total`.
 
 #### 6. Compute percentiles
 
@@ -1483,9 +1477,9 @@ query Prometheus to display the percentiles of our application:
 
 🛠️ Go to Grafana, to explore Metrics again.
 
-🛠️ To compute the percentiles for the `snowcamp_payment_process` histogram we have created:
+🛠️ To compute the percentiles for the `devoxx_payment_process` histogram we have created:
 
-* Select the `snowcamp_payment_process_milliseconds_bucket` metric,
+* Select the `devoxx_payment_process_milliseconds_bucket` metric,
 * Click on `Operations` and select `Aggregations` > `Histogram quantile`,
 * Select a Quantile value,
 * Click on `Run query`.
@@ -1508,7 +1502,7 @@ It provides some dashboards we have created from the new metrics you exposed in 
 * `Payment request count total (rated)`: represents the number of hit per second in our application computed from our
   counter,
 * ``Payment Duration distribution``: represents the various percentiles of our application computed from the
-  ``snowcamp_payment_process`` histogram,
+  ``devoxx_payment_process`` histogram,
 * ``Requests process performance`` and ``Requests store performance``: are a visualization of the buckets of the two
   histograms we created previously.
 
@@ -1743,7 +1737,7 @@ service:
 🛠️ Restart the collector:
 
 ```bash
-$ docker compose restart opentelemetry-collector
+$ docker compose up -d --build opentelemetry-collector
 ```
 
 Starting from this moment, you should no longer see traces related to `actuator/health` endpoints.
@@ -1801,12 +1795,12 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 public class PaymentService {
     // ...
 
-    @WithSpan("Snowcamp: Payment processing method")
+    @WithSpan("devoxx: Payment processing method")
     private void process(PaymentProcessingContext context) {
         //...
     }
 
-    @WithSpan("Snowcamp: Payment store method")
+    @WithSpan("devoxx: Payment store method")
     private void store(PaymentProcessingContext context) {
         //...
     }
@@ -1827,12 +1821,12 @@ import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 public class PaymentService {
     // ...
 
-    @WithSpan("Snowcamp: Payment processing method")
+    @WithSpan("devoxx: Payment processing method")
     private void process(@SpanAttribute("context") PaymentProcessingContext context) { // <-- HERE
         // ...
     }
 
-    @WithSpan("Snowcamp: Payment store method")
+    @WithSpan("devoxx: Payment store method")
     private void store(@SpanAttribute("context") PaymentProcessingContext context) { // <-- HERE
         // ...
     }
@@ -2087,7 +2081,7 @@ In this section, we will configure the Tempo data source to link our traces to t
     * Data source: `Prometheus`,
     * Span start time shift: `-2m`,
     * Span end time shift: `2m`,
-    * Tags: `service.name` as `application`
+    * Tags: `service.name` as `service_name`
 
 🛠️ Now, we will add some metric queries (click on `+ Add query` for each query):
 
@@ -2196,20 +2190,17 @@ $ docker compose --profile=profiling up -d
 Let’s use an agent again to profile our application, and the Pyroscope extension for OpenTelemetry agent
 to match span with profiling data. 
 
-🛠️ First, download the [agent](https://grafana.com/docs/pyroscope/latest/configure-client/language-sdks/java/). You can
-use the provided script to download it as `instrumentation/pyroscope.jar`:
+✅ Both `pyroscope.jar` agent and `pyroscope-otel.jar` were downloaded for you in the `/` of the container (`easypay-service/src/main/docker/Dockerfile`):
 
-```bash
-$ bash ./scripts/download-pyroscope-agent.sh
+```Dockerfile
+ENV PYROSCOPE_VERSION=v2.0.0
+ENV PYROSCOPE_URL="https://github.com/grafana/pyroscope-java/releases/download/${PYROSCOPE_VERSION}/pyroscope.jar"
+ENV PYROSCOPE_OTEL_VERSION=v1.0.1
+ENV PYROSCOPE_OTEL_URL="https://github.com/grafana/otel-profiling-java/releases/download/${PYROSCOPE_OTEL_VERSION}/pyroscope-otel.jar"
 
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-100 9782k  100 9782k    0     0  10.2M      0 --:--:-- --:--:-- --:--:-- 13.9M
-Grafana Pyroscope agent downloaded successfully in ./scripts/../instrumentation
+ADD --chown=$UID:$GID ${PYROSCOPE_URL} /pyroscope.jar
+ADD --chown=$UID:$GID ${PYROSCOPE_OTEL_URL} /pyroscope-otel.jar
 ```
-
-✅ It should have downloaded both `pyroscope.jar` and `pyroscope-otel.jar` in the `instrumentation` directory.
 
 📝 Just like for logs and metrics, we should modify the `compose.yml` deployment file for the `easypay-service` to enable
 and configure profiling with Pyroscope:
@@ -2217,11 +2208,6 @@ and configure profiling with Pyroscope:
 ```yaml
 services:
   easypay-service:
-    # ...
-    volumes:
-      - ./instrumentation/opentelemetry-javaagent.jar
-      - ./instrumentation/pyroscope.jar:/pyroscope.jar # < Add
-      - ./instrumentation/pyroscope-otel.jar:/pyroscope-otel.jar # < Add  
     # ...
     environment:
       # ...

@@ -80,9 +80,9 @@ public class PaymentResource {
          LOG.info("Processing new payment: {}", paymentRequest);
         PaymentProcessingContext paymentContext = new PaymentProcessingContext(paymentRequest);
 
-        paymentService.accept(paymentContext);
+            paymentService.accept(paymentContext);
 
-        PaymentResponse response = paymentContext.generateResponse();
+            PaymentResponse response = paymentContext.generateResponse();
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(response.paymentId()).toUri();
